@@ -1,47 +1,36 @@
-name: CI
+name: Auto Deploy ke InfinityFree
 
-on: push
+on:
+  push:
+    branches:
+      - main
 
 jobs:
-  compile-assets:
-    name: Compile assets
+  deploy:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
-        # Build jS
-      - name: Setup node
-        uses: actions/setup-node@v1
-        with:
-          node-version: '12'
-      - name: Install dependencies
-        run: yarn
-      - name: YARN Build
-        run: |
-          yarn run prod
-          cat public/mix-manifest.json # see version in log
-      - name: Upload compile assets
-        uses: actions/upload-artifact@v4
-        with:
-          name: assets
-          path: public
-  test-php:
-    name: Test/Lint PHP
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-      - name: Setup PHP
-        uses: shivammathur/setup-php@master
-        with:
-          php-version: 8.1
-          extensions: mbstring, bmath
-      - name: Composer install
-        run: composer install
-      - name: Generate artisan key
-        run: |
-          cp .env.example .env
-          php artisan key:generate
-      - name: Generate passport keys
-        run: |
-          php artisan passport:keys
-      - name: Run tests
-        run: ./vendor/bin/phpunit
+    - name: Checkout Kode
+      uses: actions/checkout@v3
+
+    - name: Setup PHP & Composer
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: '8.1'
+
+    - name: Install Dependensi Laravel (Vendor)
+      run: composer install -q --no-ansi --no-interaction --no-scripts --no-progress --prefer-dist --optimize-autoloader
+
+    - name: Upload via FTP ke InfinityFree
+      uses: SamKirkland/FTP-Deploy-Action@v4.3.4
+      with:
+        server: ${{ secrets.FTP_SERVER }}
+        username: ${{ secrets.FTP_USERNAME }}
+        password: ${{ secrets.FTP_PASSWORD }}
+        server-dir: /htdocs/
+        exclude: |
+          **/.git*
+          **/.git*/**
+          tests/**
+          .env*
+          README.md
+          phpunit.xml
